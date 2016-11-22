@@ -1,0 +1,70 @@
+# cache-extractor.py
+#
+
+import os
+
+# set cache_dir from which to extract files
+cache_dir = "./data/squid3"
+
+print("cache_dir: '%s'" % cache_dir)
+
+# hex word parse of squid_meta, headers, payload from a cache_file
+def parse_cache_file(cache_file):
+	with open(cache_file, 'rb') as cache_file_raw:
+		print(cache_file)
+		
+		byte = cache_file_raw.read(1)
+		str_buff = byte
+		payload = b""
+
+		while byte != "":
+			# check for \n (next header)
+			# hex bytes 0d0a = \n
+			if byte.encode('hex') == "0d":
+				byte2 = cache_file_raw.read(1)
+				if byte2.encode('hex') == "0a":
+					# print buffer
+					print(str_buff)
+					str_buff = ""
+					
+					# check for double \n (payload)
+					word2 = cache_file_raw.read(2)
+					if word2.encode('hex') == "0d0a":
+						# payload, read to EOF
+						payload = cache_file_raw.read()
+					else:
+						# word2 starts next header
+						byte = ""
+						str_buff = word2
+			
+			# append word to buffer and read another 2 bytes
+			str_buff = str_buff + byte
+			byte = cache_file_raw.read(1)
+		
+		# check for gzip file signatures
+		# hex bytes 1f8b08 = gzip signature
+		if payload.encode('hex')[:6] == "1f8b08":
+			decompress_gzip(payload)
+
+
+# decompress a gzipped response payload
+def decompress_gzip(response_payload):
+	print("==== payload is gzip ====")
+
+
+
+##### TESTING #####
+parse_cache_file('./data/squid3/00/5D/00005D34')
+
+exit()
+
+# get list of all cache_files
+cache_files = []
+for path, dirs, files in os.walk(cache_dir):
+#	if path != cache_dir:
+	for cache_file in files:
+		cache_files.append(("%s/%s" % (path, cache_file)))
+
+# iterate through all cache_files to extract squid_meta, headers, and payload
+for cache_file in cache_files:
+	parse_cache_file(cache_file)
