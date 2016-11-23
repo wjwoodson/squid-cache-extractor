@@ -18,8 +18,8 @@ def parse_cache_file(cache_file):
 		payload = b""
 
 		while byte != "":
-			# check for \n (next header)
-			# hex bytes 0d0a = \n
+			# check for \r\n (next header)
+			# hex bytes 0d0a = \r\n
 			if byte.encode('hex') == "0d":
 				byte2 = cache_file_raw.read(1)
 				if byte2.encode('hex') == "0a":
@@ -27,7 +27,7 @@ def parse_cache_file(cache_file):
 					print(str_buff)
 					str_buff = ""
 					
-					# check for double \n (payload)
+					# check for double \r\n (payload)
 					word2 = cache_file_raw.read(2)
 					if word2.encode('hex') == "0d0a":
 						# payload, read to EOF
@@ -41,6 +41,7 @@ def parse_cache_file(cache_file):
 			str_buff = str_buff + byte
 			byte = cache_file_raw.read(1)
 
+		# md5 response payload
 		md5sum = md5.new()
 		md5sum.update(payload)
 		print("payload md5: "+md5sum.hexdigest())		
@@ -50,6 +51,12 @@ def parse_cache_file(cache_file):
 		if payload.encode('hex')[:6] == "1f8b08":
 			decompress_gzip(payload)
 		
+		# check for zip file signature
+		# hex bytes 504b0304 = zip signature (PKZIP archive_1)
+		if payload.encode('hex')[:6] = "504b0304":
+			decompress_pk(payload)
+
+
 		# return the parsed cache_file
 		return "==== parsed_cache_file data structure"
 
