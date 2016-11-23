@@ -1,6 +1,6 @@
 # Expected data:
 
-`/data` director contains secondary log files and the cache data:
+`/data` directory contains secondary log files and the cache data:
 
 
 `store.log`
