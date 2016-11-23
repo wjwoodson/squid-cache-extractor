@@ -53,7 +53,7 @@ def parse_cache_file(cache_file):
 		
 		# check for zip file signature
 		# hex bytes 504b0304 = zip signature (PKZIP archive_1)
-		if payload.encode('hex')[:6] = "504b0304":
+		if payload.encode('hex')[:6] == "504b0304":
 			decompress_pk(payload)
 
 
