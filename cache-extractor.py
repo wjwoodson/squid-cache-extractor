@@ -162,7 +162,7 @@ def parse_references(response_payload):
 def convert_time_strings(cache_file_parsed):
 	
 	# list of header values we want to convert
-	time_headers = ["Expires", "Date"]
+	time_headers = ["Expires", "Date", "Last-Modified", ""]
 
 	for key in time_headers:
 		if key in cache_file_parsed:
