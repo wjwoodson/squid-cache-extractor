@@ -15,9 +15,13 @@ def parse_cache_file(cache_file):
 
 	# open the cache_file on disk and read
 	with open(cache_file, 'rb') as cache_file_raw:
-		#print(cache_file)
+		
+		# create dictionary to store all parsed fields
 		cache_file_parsed = {}
+
+		# store file_path and swap_filen
 		cache_file_parsed['file_path'] = cache_file
+		cache_file_parsed['swap_filen'] = cache_file.split("/").pop()
 
 		# parse url, headers, payload from cache_file
 		got_squid_meta = False
