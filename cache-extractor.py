@@ -2,9 +2,10 @@
 #
 
 import os
+import time
 import md5
 import binascii
-import time
+import zlib
 from urlparse import urlparse
 from datetime import datetime
 
@@ -86,13 +87,19 @@ def parse_cache_file(cache_file):
 		# check for gzip file signatures
 		# hex bytes 1f8b08 = gzip signature
 		if payload.encode('hex')[:6] == "1f8b08":
-			decompress_gzip(payload)
+			payload = decompress_gzip(payload)
 		
 		# check for zip file signature
 		# hex bytes 504b0304 = zip signature (PKZIP archive_1)
 		if payload.encode('hex')[:6] == "504b0304":
-			decompress_pk(payload)
+			payload = decompress_pk(payload)
 
+		# if content is text/html parse the paload for references
+		if "Content-Type" in cache_file_parsed.keys():
+			if cache_file_parsed['Content-Type'] == "text/html":
+				parse_references(payload,cache_file_parsed['url_host'])
+
+		# convert some header date formats to standard unix timestamp
 		cache_file_parsed = convert_time_strings(cache_file_parsed)
 
 		# return cache_file_parsed data structure
@@ -156,16 +163,24 @@ def parse_squid_meta(squid_meta):
 
 # decompress a gzipped response payload
 def decompress_gzip(response_payload):
-	#print("==== payload is gzip ====")
-	pass
+	decompressed = ""
+	try:
+		decompressed = zlib.decompress(response_payload, zlib.MAX_WBITS | 16)
+	except zlib.error:
+		print("Error: zlib decompression error in decompress_gzip")
+	return decompressed
 
 # decompress deflate/zip/PK response payload
 def decompress_pk(response_payload):
-	#print("==== payload is zip ====")
-	pass
+	decompressed = ""
+	try:
+		decompressed = zlib.decompress(response_payload, -zlib.MAX_WBITS)
+	except zlib.error:
+		print("Error: zlib decompression error in decompress_pk")
+	return decompressed
 
 # parse out references from response_payload
-def parse_references(response_payload):
+def parse_references(response_payload,url_host):
 	#print("==== parsed references in payload ====")
 	pass
 
@@ -188,13 +203,9 @@ def convert_time_strings(cache_file_parsed):
 
 	return cache_file_parsed
 
-# insert record into database
-def insert_record(parsed_cache_file):
-	pass
-
 
 ##### TESTING #####
-print parse_cache_file('./data/squid3/00/5D/00005DA3')
+print parse_cache_file('./data/squid3/00/49/0000494B')
 
 exit()
 
