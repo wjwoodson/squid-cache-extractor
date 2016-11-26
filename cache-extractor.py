@@ -5,6 +5,7 @@ import os
 import md5
 import binascii
 import time
+from urlparse import urlparse
 from datetime import datetime
 
 # set cache_dir from which to extract files
@@ -124,6 +125,7 @@ def parse_squid_meta(squid_meta):
 		http_code = int(binascii.a2b_hex( # http_code (string)
 			url_ver_code[url_ver_code.find("48545450"):] # 48545450 = HTTP
 			).split()[1])
+		url_parse = urlparse(url)
 
 		squid_meta_parsed['meta_cache_key'] = binascii.b2a_hex(cache_key)
 		squid_meta_parsed['meta_timestamp'] =  int(binascii.b2a_hex(timestamp[::-1]), 16)
@@ -132,6 +134,11 @@ def parse_squid_meta(squid_meta):
 		squid_meta_parsed['meta_lastmod'] = int(binascii.b2a_hex(lastmod[::-1]), 16)
 		squid_meta_parsed['meta_refcount'] = int(binascii.b2a_hex(refcount[::-1]), 16)
 		squid_meta_parsed['meta_flags'] = int(binascii.b2a_hex(flags[::-1]), 16)
+		squid_meta_parsed['url'] = url
+		squid_meta_parsed['url_host'] = url_parse.netloc
+		squid_meta_parsed['url_scheme'] = url_parse.scheme
+		squid_meta_parsed['url_path'] = url_parse.path
+		squid_meta_parsed['url_file'] = url_parse.path.rpartition("/")[2]
 		squid_meta_parsed['http_ver'] = http_ver
 		squid_meta_parsed['http_code'] = http_code
 
