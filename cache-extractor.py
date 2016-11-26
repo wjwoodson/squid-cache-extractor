@@ -8,6 +8,7 @@ import binascii
 import zlib
 from urlparse import urlparse
 from datetime import datetime
+from bs4 import BeautifulSoup as bs
 
 # set cache_dir from which to extract files
 cache_dir = "./data/squid3"
@@ -20,6 +21,7 @@ def parse_cache_file(cache_file):
 		
 		# create dictionary to store all parsed fields
 		cache_file_parsed = {}
+		cache_file_parsed['references'] = []
 
 		# store file_path and swap_filen
 		cache_file_parsed['file_path'] = cache_file
@@ -84,6 +86,12 @@ def parse_cache_file(cache_file):
 		md5sum.update(payload)
 		cache_file_parsed['payload_md5'] = md5sum.hexdigest()
 
+		# add a ref for HTTP redirects (301,302)
+		if "Location" in cache_file_parsed.keys():
+			cache_file_parsed['references'].append(
+				{'ref': cache_file_parsed['Location'],
+				'type': 'redirect'})
+
 		# check for gzip file signatures
 		# hex bytes 1f8b08 = gzip signature
 		if payload.encode('hex')[:6] == "1f8b08":
@@ -94,10 +102,12 @@ def parse_cache_file(cache_file):
 		if payload.encode('hex')[:6] == "504b0304":
 			payload = decompress_pk(payload)
 
-		# if content is text/html parse the paload for references
+		# if content is text/html parse the payload for references
 		if "Content-Type" in cache_file_parsed.keys():
 			if cache_file_parsed['Content-Type'] == "text/html":
-				parse_references(payload,cache_file_parsed['url_host'])
+				cache_file_parsed['references'] = (
+				cache_file_parsed['references']
+				+ parse_references(payload,cache_file_parsed))
 
 		# convert some header date formats to standard unix timestamp
 		cache_file_parsed = convert_time_strings(cache_file_parsed)
@@ -144,7 +154,7 @@ def parse_squid_meta(squid_meta):
 		squid_meta_parsed['url'] = url
 		squid_meta_parsed['url_host'] = url_parse.netloc
 		squid_meta_parsed['url_scheme'] = url_parse.scheme
-		squid_meta_parsed['url_path'] = url_parse.path
+		squid_meta_parsed['url_path'] = url_parse.path.rpartition("/")[0]
 		squid_meta_parsed['url_file'] = url_parse.path.rpartition("/")[2]
 		squid_meta_parsed['http_ver'] = http_ver
 		squid_meta_parsed['http_code'] = http_code
@@ -179,16 +189,67 @@ def decompress_pk(response_payload):
 		print("Error: zlib decompression error in decompress_pk")
 	return decompressed
 
-# parse out references from response_payload
-def parse_references(response_payload,url_host):
-	#print("==== parsed references in payload ====")
-	pass
+# parse out references from response_payload (currently HTML only)
+def parse_references(response_payload,cache_file_parsed):
+	
+	# create a list of references
+	references = []
+	
+	# create a new BeautifulSoup object from the HTML
+	soup = bs(response_payload, 'html.parser')	
+
+	# get all hrefs
+	for ref in soup.find_all('a'):
+		insert = {}
+		insert['ref'] = convert_abs_url(ref.get('href'),cache_file_parsed)
+		insert['type'] = "href"
+		if not insert['ref'] == None:
+			references.append(insert)
+	for ref in soup.find_all('link'):
+		insert = {}
+		insert['ref'] = convert_abs_url(ref.get('href'),cache_file_parsed)
+		insert['type'] = "href"
+		if not insert['ref'] == None:
+			references.append(insert)
+
+	# get all srcs
+	for ref in soup.find_all('img'):
+		insert = {}
+		insert['ref'] = convert_abs_url(ref.get('src'),cache_file_parsed)
+		insert['type'] = "src"
+		if not insert['ref'] == None:
+			references.append(insert)
+
+	# return a list containing dicts with refs and their types
+	return references
+
+# standardize urls in refs to absolutes. cfp is cache_file_parsed dict
+def convert_abs_url(ref,cfp):
+
+	# don't try to convert a ref that doesn't exist
+	if ref == None:
+		return None
+	# already absolute, probably
+	if ref[:4] == "http":
+		return ref
+	# relative (root)
+	if ref[:1] == "/":
+		return cfp['url_scheme']+"://"+cfp['url_host']+ref
+	# relative (traveral..)
+	if ref[:3] == "../":
+		trimmed_path = cfp['url_path'].rpartition("/")[0]
+		return cfp['url_scheme']+"://"+cfp['url_host']+trimmed_path+ref[2:]
+	# relative (more traveral..)
+        if ref[:2] == "./":
+                return cfp['url_scheme']+"://"+cfp['url_host']+cfp['url_path']+ref[1:]
+	# relative
+	return cfp['url_scheme']+"://"+cfp['url_host']+cfp['url_path']+"/"+ref
 
 # standardize time formats to unix time
 def convert_time_strings(cache_file_parsed):
 	
 	# list of header values we want to convert
-	time_headers = ["Expires", "Date", "Last-Modified", ""]
+	time_headers = ["Expires", "Date", "Last-Modified"]
 
 	for key in time_headers:
 		if key in cache_file_parsed:
@@ -203,11 +264,6 @@ def convert_time_strings(cache_file_parsed):
 
 	return cache_file_parsed
 
-
-##### TESTING #####
-print parse_cache_file('./data/squid3/00/49/0000494B')
-
-exit()
 
 # print out the configured cache_dir
 print("cache_dir: '%s'" % cache_dir)
