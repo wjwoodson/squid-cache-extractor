@@ -6,6 +6,7 @@ import time
 import md5
 import binascii
 import zlib
+import json
 from urlparse import urlparse
 from datetime import datetime
 from bs4 import BeautifulSoup as bs
@@ -231,19 +232,19 @@ def convert_abs_url(ref,cfp):
 		return None
 	# already absolute, probably
 	if ref[:4] == "http":
-		return ref
+		return (ref).encode('ascii','ignore')
 	# relative (root)
 	if ref[:1] == "/":
-		return cfp['url_scheme']+"://"+cfp['url_host']+ref
+		return (cfp['url_scheme']+"://"+cfp['url_host']+ref).encode('ascii','ignore')
 	# relative (traveral..)
 	if ref[:3] == "../":
 		trimmed_path = cfp['url_path'].rpartition("/")[0]
-		return cfp['url_scheme']+"://"+cfp['url_host']+trimmed_path+ref[2:]
+		return (cfp['url_scheme']+"://"+cfp['url_host']+trimmed_path+ref[2:]).encode('ascii','ignore')
 	# relative (more traveral..)
         if ref[:2] == "./":
-                return cfp['url_scheme']+"://"+cfp['url_host']+cfp['url_path']+ref[1:]
+                return (cfp['url_scheme']+"://"+cfp['url_host']+cfp['url_path']+ref[1:]).encode('ascii','ignore')
 	# relative
-	return cfp['url_scheme']+"://"+cfp['url_host']+cfp['url_path']+"/"+ref
+	return (cfp['url_scheme']+"://"+cfp['url_host']+cfp['url_path']+"/"+ref).encode('ascii','ignore')
 
 # standardize time formats to unix time
 def convert_time_strings(cache_file_parsed):
@@ -276,5 +277,10 @@ for path, dirs, files in os.walk(cache_dir):
 			cache_files.append(("%s/%s" % (path, cache_file)))
 
 # iterate through all cache_files to extract squid_meta, headers, and payload
+output = open('cache-extractor.json', 'w')
 for cache_file in cache_files:
-	print parse_cache_file(cache_file)
+	try:
+		output.write(json.dumps(parse_cache_file(cache_file))+"\n") # just write this to a file for now, manual cleanup
+	except UnicodeDecodeError:
+		print("Error: UnicodeDecodeError because unicode has to make everything difficult")
+output.close()

@@ -1,6 +1,7 @@
 # parse-swap-state.py
 #
 import binascii
+import json
 
 # parse an individual 72 byte entry from swap.state
 def parse_swap_state_entry(swap_state_entry):
@@ -37,14 +38,12 @@ cache_dir = "./data/squid3"
 # open the cache_file on disk and read one enry ata time
 with open("%s/swap.state" % cache_dir, 'rb') as swap_state_raw:
 
-                # create dictionary to store all parsed fields
-                swap_state_parsed = {}
-
                 # parse url, headers, payload from cache_file
                 swap_state_entry = swap_state_raw.read(72)
 
+		output = open('parse-swap-state.json', 'w')
                 # read all file bytes
                 while swap_state_entry != "":
-			print(parse_swap_state_entry(swap_state_entry))
+			output.write(json.dumps(parse_swap_state_entry(swap_state_entry))+"\n")
 			swap_state_entry = swap_state_raw.read(72)
-		
+		output.close()
