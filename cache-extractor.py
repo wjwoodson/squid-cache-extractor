@@ -14,6 +14,9 @@ from bs4 import BeautifulSoup as bs
 # set cache_dir from which to extract files
 cache_dir = "./data/squid3"
 
+# set whitelist for http headers
+whitelist = ['Location','Content-Type','Content-Encoding','Content-Language','Expires','Date','Last-Modified','Vary','Mime-Version','Server','Content-Length','Keep-Alive','Cache-Control','Access-Control-Allow-Origin','ETag','P3P','Set-Cookie','Via','Aka-DNS-Name','Content-Security-Policy','Content-Security-Policy-Report-Only','X-Cache','X-Amz-Cf-Id','X-Served-By','X-Powered-By','X-CDN','X-Frame-Options','X-Content-Type-Options','X-Varnish','Strict-Transport-Security']
+
 # hex byte parse of squid_meta, headers, payload from a cache_file
 def parse_cache_file(cache_file):
 
@@ -47,7 +50,9 @@ def parse_cache_file(cache_file):
 						try:
 							key = str_buff.split(":",1)[0].strip()
 							value = str_buff.split(":",1)[1].strip()
-							cache_file_parsed[key] = value
+							# only add header if in whitelist
+							if key in whitelist:
+								cache_file_parsed[key] = value
 						except IndexError:
 							print("Error: IndexError in parse_cache_file at cache_file: %s"
 								% cache_file)
@@ -112,6 +117,11 @@ def parse_cache_file(cache_file):
 
 		# convert some header date formats to standard unix timestamp
 		cache_file_parsed = convert_time_strings(cache_file_parsed)
+
+		# md5 response payload after any decompression
+		md5sum2 = md5.new()
+		md5sum2.update(payload)
+		cache_file_parsed['payload_md5_decompressed'] = md5sum2.hexdigest()
 
 		# return cache_file_parsed data structure
 		return cache_file_parsed
