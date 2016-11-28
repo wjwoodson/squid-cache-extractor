@@ -25,8 +25,20 @@ for row in file_string:
 	log_list[4] = log_list[4].lower() # convert md5 to lower	
 	log_list[0] = log_list[0].rpartition(".")[0] # convert timestamp to int
 	
+#	print log_list[12]
 	url_parse = urlparse(log_list[12]) # parse url into components
+
+	# try to get root domain from hostname
+	root_domain = url_parse.netloc
+	try:
+		root_domain = url_parse.netloc.split(".")
+		root_domain = ".".join(len(root_domain[-2]) < 4 and root_domain[-3:] or root_domain[-2:])
+	except IndexError:
+		print("Error: IndexError when parsing %s" % root_domain)	
+
 	log_list.append(url_parse.netloc)
+	log_list.append(url_parse.netloc.rpartition(".")[2])
+	log_list.append(root_domain)
 	log_list.append(url_parse.scheme)
 	log_list.append(url_parse.path.rpartition("/")[0])
 	log_list.append(url_parse.path.rpartition("/")[2])
@@ -45,8 +57,8 @@ with open(csv_file, 'w+') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames = ['meta_timestamp',
 		'meta_store_action','meta_store_dir','cache_filen','meta_cache_key',
 		'http_code','Date','meta_lastmod','meta_expires',
-		'Content-Type','http_method','url','url_host','url_scheme',
-		'url_path','url_file','meta_expected_length','meta_real_length'])
+		'Content-Type','http_method','url','url_host','url_tld','url_domain',
+		'url_scheme','url_path','url_file','meta_expected_length','meta_real_length'])
 	writer.writeheader()
 
 	# write rows to csv

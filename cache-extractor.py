@@ -154,6 +154,10 @@ def parse_squid_meta(squid_meta):
 			url_ver_code[url_ver_code.find("48545450"):] # 48545450 = HTTP
 			).split()[1])
 		url_parse = urlparse(url)
+		
+		# try to get root domain from hostname
+		root_domain = url_parse.hostname.split(".")
+		root_domain = ".".join(len(root_domain[-2]) < 4 and root_domain[-3:] or root_domain[-2:])
 
 		squid_meta_parsed['meta_cache_key'] = binascii.b2a_hex(cache_key)
 		squid_meta_parsed['meta_timestamp'] =  int(binascii.b2a_hex(timestamp[::-1]), 16)
@@ -164,6 +168,8 @@ def parse_squid_meta(squid_meta):
 		squid_meta_parsed['meta_flags'] = int(binascii.b2a_hex(flags[::-1]), 16)
 		squid_meta_parsed['url'] = url
 		squid_meta_parsed['url_host'] = url_parse.netloc
+		squid_meta_parsed['url_tld'] = url_parse.netloc.rpartition(".")[2]
+		squid_meta_parsed['url_domain'] = root_domain
 		squid_meta_parsed['url_scheme'] = url_parse.scheme
 		squid_meta_parsed['url_path'] = url_parse.path.rpartition("/")[0]
 		squid_meta_parsed['url_file'] = url_parse.path.rpartition("/")[2]
