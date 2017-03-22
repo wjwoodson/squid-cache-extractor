@@ -1,9 +1,9 @@
 # Squid Cache Extractor
-Forensic artifact extraction from squid proxy cache and secondary log sources:
+Forensic artifact extraction from squid3 proxy cache and secondary log sources.
 
-- [`cache_dir`](data) contents parsing 
-- `cache_dir/swap.state` parsing
-- `store.log` parsing
+- Parse headers and metadata from cached files residing in a squid [`cache_dir`](data)  
+- Parse metadata from binary cache index `cache_dir/swap.state`  
+- Parse secondary log data from squid `store.log` file  
 
 ## Usage
 
